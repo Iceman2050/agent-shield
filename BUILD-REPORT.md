@@ -103,6 +103,18 @@ suite re-run green.
   artifact; an MCP config bundled inside a skill directory is also
   listed as its own artifact.
 
+## Attribution compliance (Aldo standing order, 2026-11-10)
+
+No Muse builder attribution, Muse invite/referral code, or "free
+tokens" line appears anywhere in this repository — not in the README,
+docs, code, comments, package metadata, or the v0.1.0 release notes.
+Verified by recursive grep (`muse`, the referral code, `invite code`,
+`free tokens`, `built by`) over the working tree, the full git history,
+and the live GitHub release body: zero matches. Attribution is
+"Ingenious AI" only (LICENSE, pyproject authors, action author), which
+the order explicitly permits. Nothing had to be removed — the line was
+never included.
+
 ## Known gaps / future work
 
 - No rules directory / user-supplied custom rules yet (v0.2 candidate).
