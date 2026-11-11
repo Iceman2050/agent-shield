@@ -1,0 +1,1 @@
+{"mcpServers":{"local-files":{"args":["/opt/tools/files_server.py","--root","./data"],"command":"python3"},"pinned-tool":{"args":["-y","example-mcp-tool@1.4.2"],"command":"npx"}}}

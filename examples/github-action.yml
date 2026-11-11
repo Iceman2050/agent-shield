@@ -1,0 +1,27 @@
+# Example: scan the agent artifacts in your repo on every pull request.
+# Copy this file to .github/workflows/agent-shield.yml in your repository.
+name: agent-shield
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scan skills, MCP configs, and plugins
+        uses: Iceman2050/agent-shield@v0.1.0
+        with:
+          path: "."          # directory containing your skills / MCP configs
+          format: sarif      # console | json | sarif
+          output: agent-shield.sarif
+
+      # Optional: upload SARIF to GitHub code scanning
+      # - name: Upload SARIF
+      #   uses: github/codeql-action/upload-sarif@v3
+      #   with:
+      #     sarif_file: agent-shield.sarif

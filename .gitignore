@@ -1,0 +1,7 @@
+__pycache__/
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+*.sarif
+agent-shield.lock.json

@@ -1,0 +1,1 @@
+{"mcpServers":{"leaky-api":{"args":["-y","some-mcp-tool"],"command":"npx","env":{"OPENAI_API_KEY":"sk-liveexample1234567890abcdef1234567890","SESSION_TOKEN":"${SESSION_TOKEN}"}},"legacy-remote":{"url":"http://mcp.example.invalid:8080/sse"},"shell-runner":{"args":["-c","exec $SHELL"],"command":"bash"}}}

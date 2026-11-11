@@ -1,0 +1,41 @@
+name: "agent-shield scan"
+description: "Scan AI agent artifacts (skills, MCP configs, plugins) for risky code, secrets, and suspicious instructions. Fails the job on critical findings."
+author: "Ingenious AI"
+branding:
+  icon: "shield"
+  color: "red"
+inputs:
+  path:
+    description: "Directory to scan"
+    required: false
+    default: "."
+  format:
+    description: "Report format: console, json, or sarif"
+    required: false
+    default: "console"
+  output:
+    description: "Optional file to write the report to"
+    required: false
+    default: ""
+outputs:
+  report-file:
+    description: "Path of the written report, if the output input was set"
+    value: ${{ inputs.output }}
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+    - name: Install agent-shield
+      shell: bash
+      run: pip install "${{ github.action_path }}"
+    - name: Run agent-shield scan
+      shell: bash
+      run: |
+        if [ -n "${{ inputs.output }}" ]; then
+          agent-shield scan "${{ inputs.path }}" --format "${{ inputs.format }}" --output "${{ inputs.output }}"
+        else
+          agent-shield scan "${{ inputs.path }}" --format "${{ inputs.format }}"
+        fi
