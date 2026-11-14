@@ -24,6 +24,13 @@ def render_console(report):
     for art in report["artifacts"]:
         lines.append("== %s (%s) ==" % (art["name"], art["kind"]))
         lines.append("  source: %s" % art["source"])
+        if art.get("publisher"):
+            lines.append("  publisher (as declared): %s" % art["publisher"])
+        if art.get("digest"):
+            lines.append("  digest: sha256:%s" % art["digest"])
+        if art.get("changed_since_approved") is not None:
+            lines.append("  changed since approved lock: %s"
+                         % ("yes" if art["changed_since_approved"] else "no"))
         if art["version"]:
             lines.append("  version: %s" % art["version"])
         lines.append("  files: %d (%d executable)" % (

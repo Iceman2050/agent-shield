@@ -196,3 +196,55 @@ def test_subprocess_entrypoint():
              "PYTHONPATH": os.path.join(os.path.dirname(__file__), "..", "src")})
     assert proc.returncode == 1
     assert "bad-mcp" in proc.stdout
+
+
+def _write_skill(root, name, frontmatter_extra="", body="Take notes."):
+    skill_dir = os.path.join(str(root), name)
+    os.makedirs(skill_dir)
+    with open(os.path.join(skill_dir, "SKILL.md"), "w", encoding="utf-8") as fh:
+        fh.write("---\nname: %s\n%s---\n%s\n" % (name, frontmatter_extra, body))
+    return skill_dir
+
+
+def test_acbom_digest_present_and_deterministic(report):
+    for art in report["artifacts"]:
+        assert art["digest"] == sbom.artifact_digest(art["files"])
+        assert len(art["digest"]) == 64
+
+
+def test_acbom_digest_changes_with_content(tmp_path):
+    _write_skill(tmp_path, "digest-skill")
+    first = sbom.scan(str(tmp_path))["artifacts"][0]["digest"]
+    with open(os.path.join(str(tmp_path), "digest-skill", "SKILL.md"),
+              "a", encoding="utf-8") as fh:
+        fh.write("one more line\n")
+    second = sbom.scan(str(tmp_path))["artifacts"][0]["digest"]
+    assert first != second
+
+
+def test_publisher_from_declared_author(tmp_path):
+    _write_skill(tmp_path, "authored-skill", "author: Jane Dev\n")
+    art = sbom.scan(str(tmp_path))["artifacts"][0]
+    assert art["publisher"] == "Jane Dev"
+
+
+def test_publisher_none_when_undeclared(report):
+    # No bundled fixture declares a publisher/author; the field must be
+    # null rather than inferred.
+    for art in report["artifacts"]:
+        assert art["publisher"] is None
+
+
+def test_changed_since_approved_lifecycle(tmp_path):
+    _write_skill(tmp_path, "locked-skill")
+    # No lockfile yet: no approved baseline, field stays None.
+    art = sbom.scan(str(tmp_path))["artifacts"][0]
+    assert art["changed_since_approved"] is None
+    lockfile.write_lock(str(tmp_path))
+    art = sbom.scan(str(tmp_path))["artifacts"][0]
+    assert art["changed_since_approved"] is False
+    with open(os.path.join(str(tmp_path), "locked-skill", "SKILL.md"),
+              "a", encoding="utf-8") as fh:
+        fh.write("edited after approval\n")
+    art = sbom.scan(str(tmp_path))["artifacts"][0]
+    assert art["changed_since_approved"] is True

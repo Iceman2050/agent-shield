@@ -9,8 +9,11 @@ credentials. Most people install them without ever reading what they do.
 `agent-shield` statically inspects those artifacts *before* you trust them:
 
 - **Inventories** every skill, plugin, and MCP config in a directory and
-  emits an **Agent SBOM (ACBOM)** — per-file sha256, executable components,
-  declared vs. observed capabilities, dependencies.
+  emits an **Agent SBOM (ACBOM)** — per-file sha256 plus one digest per
+  artifact, the publisher exactly as declared in the artifact's own
+  metadata (never inferred), executable components, declared vs. observed
+  capabilities, dependencies, and — when an approved lockfile exists — a
+  per-artifact changed-since-approved flag.
 - **Detects** deterministic risks: hardcoded secrets, shell execution,
   dynamic `eval`/`exec`, credential-file access, network egress,
   `curl | sh`, unpinned dependencies, MCP servers that launch shells or

@@ -1,9 +1,12 @@
 """Scan orchestration: build the Agent Capability Bill of Materials (ACBOM).
 
-An ACBOM record inventories one artifact: identity, source, per-file sha256,
+An ACBOM record inventories one artifact: identity, source, publisher as
+declared in its own metadata, per-file sha256 plus a whole-artifact digest,
 executable components, declared vs observed capabilities, dependencies,
-findings, and the verification timestamp.
+findings, the verification timestamp, and — when an approved lockfile
+exists at the scan root — whether it changed since that approval.
 """
+import hashlib
 import json
 import os
 import subprocess
@@ -38,6 +41,34 @@ def _rel(root, path):
     return os.path.relpath(path, root)
 
 
+def artifact_digest(files):
+    """One digest for the whole artifact: sha256 over the sorted
+    (path, sha256) pairs of its files. Deterministic; changes iff any
+    file's content or path set changes."""
+    h = hashlib.sha256()
+    for f in sorted(files, key=lambda f: f["path"]):
+        h.update(f["path"].encode("utf-8"))
+        h.update(b"\0")
+        h.update(f["sha256"].encode("ascii"))
+        h.update(b"\n")
+    return h.hexdigest()
+
+
+def _publisher(meta):
+    """Publisher exactly as declared in the artifact's own metadata
+    (frontmatter/manifest `publisher:` or `author:`); never inferred.
+    A manifest author may be a string or an object with a name."""
+    for key in ("publisher", "author"):
+        value = meta.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+        if isinstance(value, dict):
+            name = value.get("name")
+            if isinstance(name, str) and name.strip():
+                return name.strip()
+    return None
+
+
 def scan_artifact(art, root):
     """Build the ACBOM record + findings for one discovered artifact."""
     kind = art["kind"]
@@ -63,7 +94,9 @@ def scan_artifact(art, root):
         servers = mcp_mod.server_records(data)
         return {
             "name": name, "kind": kind, "source": _rel(root, art["path"]),
-            "version": None, "commit": None,
+            "version": None, "commit": None, "publisher": None,
+            "digest": artifact_digest(files),
+            "changed_since_approved": None,
             "description": "MCP configuration with %d server(s)" % len(servers),
             "mcp_servers": servers,
             "files": files,
@@ -132,6 +165,9 @@ def scan_artifact(art, root):
         "source": source_url or _rel(root, directory),
         "version": str(meta.get("version")) if meta.get("version") else None,
         "commit": commit,
+        "publisher": _publisher(meta),
+        "digest": artifact_digest(files),
+        "changed_since_approved": None,
         "description": meta.get("description") if isinstance(meta.get("description"), str) else None,
         "files": files,
         "executable_components": executables,
@@ -156,10 +192,33 @@ def summarize(artifacts):
             "suspicious_instructions": suspicious}
 
 
+def _annotate_changed(root, artifacts):
+    """Fill changed_since_approved from an existing lockfile at the scan
+    root: True if the artifact's files differ from (or are absent from)
+    the approved lock, False if identical. Stays None when there is no
+    readable lockfile — no approved baseline, no claim."""
+    lock_path = os.path.join(root, LOCK_NAME)
+    if not os.path.isfile(lock_path):
+        return
+    try:
+        with open(lock_path, "r", encoding="utf-8") as fh:
+            locked = json.load(fh).get("artifacts", {})
+    except (OSError, ValueError):
+        return
+    for record in artifacts:
+        entry = locked.get(record["source"])
+        if entry is None:
+            record["changed_since_approved"] = True
+        else:
+            current = {f["path"]: f["sha256"] for f in record["files"]}
+            record["changed_since_approved"] = current != entry.get("files", {})
+
+
 def scan(root):
     """Scan a directory tree; returns the full report dict (ACBOM set)."""
     root = os.path.abspath(root)
     artifacts = [scan_artifact(art, root) for art in discover(root)]
+    _annotate_changed(root, artifacts)
     return {"tool": "agent-shield", "tool_version": __version__,
             "generated_at": _now(), "root": root,
             "artifacts": artifacts, "summary": summarize(artifacts)}
