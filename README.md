@@ -149,3 +149,7 @@ pytest
 
 MIT — see [LICENSE](LICENSE). Security policy: [SECURITY.md](SECURITY.md).
 Contributing: [CONTRIBUTING.md](CONTRIBUTING.md).
+
+---
+
+Built by [Ingenious AI](https://getingeniousai.com) — more agent-security tools: [getingeniousai.com/portfolio](https://getingeniousai.com/portfolio)
